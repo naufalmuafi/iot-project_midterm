@@ -12,6 +12,7 @@
 
 // -------- User Defined Library --------
 #include "DHT22.h"
+#include "ssd1306.h"
 
 
 // -------- USER DEFINED DECLARATION --------
@@ -44,6 +45,29 @@ void init_setup()
   // initialize the NVS (Non-Volatile Storage)
   nvs_flash_init();
   vTaskDelay(2000 / portTICK_PERIOD_MS);
+
+  // -------- OLED Configuration --------
+  SSD1306_t dev;
+  i2c_master_init(&dev, CONFIG_SDA_GPIO, CONFIG_SCL_GPIO, CONFIG_RESET_GPIO);
+
+  ssd1306_init(&dev, 128, 64);
+  ssd1306_clear_screen(&dev, false);
+  ssd1306_contrast(&dev, 0xff);
+}
+
+
+/*----------------------------------------------------
+
+Function:
+OLED Handler
+Arg: int length, float input, int page
+
+----------------------------------------------------*/
+void set_OLED(int length, float input, int page)
+{
+  char text[length];
+  sprintf(text, "%.2f", input);
+  ssd1306_display_text(&dev, page, text, length, false);
 }
 
 

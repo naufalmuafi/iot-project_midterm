@@ -412,3 +412,8 @@ if(NOT CMAKE_INSTALL_LOCAL_ONLY)
   include("D:/esp/uts_iot-project/build/esp-idf/DHT22/cmake_install.cmake")
 endif()
 
+if(NOT CMAKE_INSTALL_LOCAL_ONLY)
+  # Include the install script for the subdirectory.
+  include("D:/esp/uts_iot-project/build/esp-idf/ssd1306/cmake_install.cmake")
+endif()
+

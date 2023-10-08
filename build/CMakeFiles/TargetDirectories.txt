@@ -614,3 +614,10 @@ D:/esp/uts_iot-project/build/esp-idf/DHT22/CMakeFiles/list_install_components.di
 D:/esp/uts_iot-project/build/esp-idf/DHT22/CMakeFiles/install.dir
 D:/esp/uts_iot-project/build/esp-idf/DHT22/CMakeFiles/install/local.dir
 D:/esp/uts_iot-project/build/esp-idf/DHT22/CMakeFiles/install/strip.dir
+D:/esp/uts_iot-project/build/esp-idf/ssd1306/CMakeFiles/__idf_ssd1306.dir
+D:/esp/uts_iot-project/build/esp-idf/ssd1306/CMakeFiles/edit_cache.dir
+D:/esp/uts_iot-project/build/esp-idf/ssd1306/CMakeFiles/rebuild_cache.dir
+D:/esp/uts_iot-project/build/esp-idf/ssd1306/CMakeFiles/list_install_components.dir
+D:/esp/uts_iot-project/build/esp-idf/ssd1306/CMakeFiles/install.dir
+D:/esp/uts_iot-project/build/esp-idf/ssd1306/CMakeFiles/install/local.dir
+D:/esp/uts_iot-project/build/esp-idf/ssd1306/CMakeFiles/install/strip.dir
