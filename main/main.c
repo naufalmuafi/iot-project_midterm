@@ -1,3 +1,4 @@
+// -------- Including Necessary Library --------
 #include <stdio.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -13,12 +14,18 @@
 #include "DHT22.h"
 
 
-// -------- GPIO PIN DECLARATION --------
+// -------- USER DEFINED DECLARATION --------
+
+// DHT22 Declaration
 #define DHT22_PIN GPIO_NUM_32
-#define POT_PIN GPIO_NUM_15
 
+// Potensiometer Declaration
+#define CHANNEL_ADC adc1_chars
+#define ADC_UNIT ADC_UNIT_1
+#define POT_PIN ADC1_CHANNEL_5
+#define ADC_ATTENUASI ADC_ATTEN_DB_0
 
-static esp_adc_cal_characteristics_t adc2_chars;
+static esp_adc_cal_characteristics_t CHANNEL_ADC;
 
 
 /*----------------------------------------------------
@@ -56,7 +63,7 @@ void DHT_task(void *pvParameter)
     printf("Humidity %.2f %%\n", getHumidity());           // get the humidity value
     printf("Temperature %.2f degC\n\n", getTemperature()); // get the temperature value
 
-    vTaskDelay(2000 / portTICK_PERIOD_MS); // delay selama 2s
+    vTaskDelay(2000 / portTICK_PERIOD_MS); // delay for 2s
   }
 }
 
@@ -69,21 +76,25 @@ Potensiometer Read
 ----------------------------------------------------*/
 void potentiometer_task(void *pvParameter)
 {  
-  // Konfigurasi ADC untuk mengukur nilai analog
-  esp_adc_cal_characterize(ADC_UNIT_2, ADC_ATTEN_DB_0, ADC_WIDTH_BIT_DEFAULT, 0, &adc2_chars);
+  // -------- ADC CONFIGURATION --------
 
-  adc2_config_width(ADC_WIDTH_BIT_DEFAULT);                       // Resolusi 12-bit
-  adc2_config_channel_atten(ADC2_CHANNEL_3, ADC_ATTEN_DB_0); // Tegangan referensi penuh (0 dB)
+  // Calibrate the ADC
+  esp_adc_cal_characterize(ADC_UNIT, ADC_ATTENUASI, ADC_WIDTH_BIT_DEFAULT, 0, &CHANNEL_ADC);
+
+  adc1_config_width(ADC_WIDTH_BIT_DEFAULT); // Config ADC bit width
+  adc1_config_channel_atten(POT_PIN, ADC_ATTENUASI); // config potentio pin with attenuation parameter
 
   while (1)
-  {    
-    // convert to mV
-    uint32_t mV = esp_adc_cal_raw_to_voltage(adc2_get_raw(ADC2_CHANNEL_3), &adc2_chars);
+  {
+    int adc_value = adc1_get_raw(POT_PIN); // capture RAW ADC Value
+    // convert to mV    
+    uint32_t mV = esp_adc_cal_raw_to_voltage(adc1_get_raw(POT_PIN), &CHANNEL_ADC);
 
-    // Tampilkan nilai di terminal serial
-    printf("Nilai Potensiometer: %d\n", mV);
+    // display value on serial terminal
+    printf("ADC Value: %d\n", adc_value);
+    printf("Nilai Potentiometer: %ld mV\n", mV);
 
-    vTaskDelay(pdMS_TO_TICKS(100)); // delay selama 1s
+    vTaskDelay(pdMS_TO_TICKS(500)); // delay for 1s
   }
 }
 
@@ -104,6 +115,6 @@ void app_main()
   TASK CALLING
 
   ----------------------------------------------------*/
-  xTaskCreate(&DHT_task, "DHT_task", 2048, NULL, 5, NULL);
+  // xTaskCreate(&DHT_task, "DHT_task", 2048, NULL, 5, NULL);
   xTaskCreate(potentiometer_task, "potentiometer_task", 2048, NULL, 5, NULL);
 }
