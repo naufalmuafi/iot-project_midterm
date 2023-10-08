@@ -7,8 +7,28 @@
 #include "driver/gpio.h"
 #include "sdkconfig.h"
 
+
 // -------- User Defined Library --------
 #include "DHT22.h"
+
+
+// -------- GPIO PIN DECLARATION --------
+#define DHT22_PIN GPIO_NUM_32
+
+
+/*----------------------------------------------------
+
+Function:
+Initialization Setup
+
+----------------------------------------------------*/
+void init_setup()
+{
+  // initialize the NVS (Non-Volatile Storage)
+  nvs_flash_init();
+  vTaskDelay(2000 / portTICK_PERIOD_MS);
+}
+
 
 /*----------------------------------------------------
 
@@ -19,7 +39,7 @@ from DHT22.h
 ----------------------------------------------------*/
 void DHT_task(void *pvParameter)
 {
-  setDHTgpio(GPIO_NUM_32); // Set GPIO for DHT22 Sensor
+  setDHTgpio(DHT22_PIN); // Set GPIO for DHT22 Sensor
 
   while (1)
   {
@@ -35,11 +55,16 @@ void DHT_task(void *pvParameter)
   }
 }
 
+
+/*----------------------------------------------------
+
+Main App Function
+
+----------------------------------------------------*/
 void app_main()
 {
-  // initialize the NVS (Non-Volatile Storage)
-  nvs_flash_init();
-  vTaskDelay(2000 / portTICK_PERIOD_MS);
+  // First, Call Initialization Setup
+  init_setup();
 
   /*----------------------------------------------------
 
