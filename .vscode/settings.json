@@ -22,7 +22,8 @@
     "gpio.h": "c",
     "stdio.h": "c",
     "sdkconfig.h": "c",
-    "dht22.h": "c"
+    "dht22.h": "c",
+    "nvs_flash.h": "c"
   },
   "idf.flashType": "UART"
 }
