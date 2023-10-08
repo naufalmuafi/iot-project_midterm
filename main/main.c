@@ -19,11 +19,16 @@
 // DHT22 Declaration
 #define DHT22_PIN GPIO_NUM_32
 
-// Potensiometer Declaration
+// ADC Declaration
 #define CHANNEL_ADC adc1_chars
 #define ADC_UNIT ADC_UNIT_1
+#define ADC_ATTENUASI ADC_ATTEN_DB_11
+
+// Potentiometer Declaration
 #define POT_PIN ADC1_CHANNEL_5
-#define ADC_ATTENUASI ADC_ATTEN_DB_0
+
+// LDR Declaration
+#define LDR_PIN ADC1_CHANNEL_6
 
 static esp_adc_cal_characteristics_t CHANNEL_ADC;
 
@@ -92,9 +97,36 @@ void potentiometer_task(void *pvParameter)
 
     // display value on serial terminal
     printf("ADC Value: %d\n", adc_value);
-    printf("Nilai Potentiometer: %ld mV\n", mV);
+    printf("Nilai Potentiometer: %ld mV\n\n", mV);
 
-    vTaskDelay(pdMS_TO_TICKS(500)); // delay for 1s
+    vTaskDelay(pdMS_TO_TICKS(500)); // delay for 0.5s
+  }
+}
+
+/*----------------------------------------------------
+
+Task:
+LDR/PHotoresistor Read
+
+----------------------------------------------------*/
+void ldr_task(void *pvParameter)
+{
+  // -------- ADC CONFIGURATION --------
+
+  // Calibrate the ADC
+  esp_adc_cal_characterize(ADC_UNIT, ADC_ATTENUASI, ADC_WIDTH_BIT_DEFAULT, 0, &CHANNEL_ADC);
+
+  adc1_config_width(ADC_WIDTH_BIT_DEFAULT);          // Config ADC bit width
+  adc1_config_channel_atten(POT_PIN, ADC_ATTENUASI); // config potentio pin with attenuation parameter
+
+  while (1)
+  {
+    int adc_value = adc1_get_raw(LDR_PIN); // capture RAW ADC Value from LDR Sensor
+
+    // display value on serial terminal
+    printf("LDR ADC Value: %d\n\n", adc_value);    
+
+    vTaskDelay(pdMS_TO_TICKS(500)); // delay for 0.5s
   }
 }
 
@@ -115,6 +147,7 @@ void app_main()
   TASK CALLING
 
   ----------------------------------------------------*/
-  // xTaskCreate(&DHT_task, "DHT_task", 2048, NULL, 5, NULL);
+  xTaskCreate(&DHT_task, "DHT_task", 2048, NULL, 5, NULL);
   xTaskCreate(potentiometer_task, "potentiometer_task", 2048, NULL, 5, NULL);
+  xTaskCreate(ldr_task, "ldr_task", 2048, NULL, 5, NULL);
 }

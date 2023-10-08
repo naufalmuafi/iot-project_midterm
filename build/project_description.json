@@ -1,7 +1,7 @@
 {
     "version":            "1",
     "project_name":       "uts_iot-project",
-    "project_version":    "8778308-dirty",
+    "project_version":    "4e7ebf9-dirty",
     "project_path":       "D:/esp/uts_iot-project",
     "idf_path":           "C:/Users/HP/esp/esp-idf",
     "build_dir":          "D:/esp/uts_iot-project/build",
