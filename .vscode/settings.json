@@ -23,5 +23,6 @@
     "stdio.h": "c",
     "sdkconfig.h": "c",
     "dht22.h": "c"
-  }
+  },
+  "idf.flashType": "UART"
 }
