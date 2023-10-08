@@ -25,10 +25,10 @@
 #define ADC_ATTENUASI ADC_ATTEN_DB_11
 
 // Potentiometer Declaration
-#define POT_PIN ADC1_CHANNEL_5
+#define POT_PIN ADC1_CHANNEL_5 //GPIO 33
 
 // LDR Declaration
-#define LDR_PIN ADC1_CHANNEL_6
+#define LDR_PIN ADC1_CHANNEL_6 // GPIO 34
 
 static esp_adc_cal_characteristics_t CHANNEL_ADC;
 
