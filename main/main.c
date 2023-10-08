@@ -31,8 +31,9 @@
 // LDR Declaration
 #define LDR_PIN ADC1_CHANNEL_6 // GPIO 34
 
+// Object Declaration
 static esp_adc_cal_characteristics_t CHANNEL_ADC;
-
+SSD1306_t dev;
 
 /*----------------------------------------------------
 
@@ -46,8 +47,7 @@ void init_setup()
   nvs_flash_init();
   vTaskDelay(2000 / portTICK_PERIOD_MS);
 
-  // -------- OLED Configuration --------
-  SSD1306_t dev;
+  // -------- OLED Configuration --------  
   i2c_master_init(&dev, CONFIG_SDA_GPIO, CONFIG_SCL_GPIO, CONFIG_RESET_GPIO);
 
   ssd1306_init(&dev, 128, 64);
@@ -60,10 +60,42 @@ void init_setup()
 
 Function:
 OLED Handler
-Arg: int length, float input, int page
+data type 0 = float ; data type 1 = int ; data type 2 = string
 
 ----------------------------------------------------*/
-void set_OLED(int length, float input, int page)
+void set_OLED(const char *label, void *value, int data_type, int page)
+{
+  char display_text[64]; // Assume the maximum length of text is 64 characters
+
+  if (data_type == 0)
+  {
+    // Tipe data float
+    float float_value = *((float *)value);
+    snprintf(display_text, sizeof(display_text), "%s: %.2f", label, float_value);
+  }
+  else if (data_type == 1)
+  {
+    // Tipe data integer
+    int int_value = *((int *)value);
+    snprintf(display_text, sizeof(display_text), "%s: %d", label, int_value);
+  }
+  else if (data_type == 2)
+  {
+    // Tipe data lainnya (misalnya, string)
+    char *string_value = (char *)value;
+    snprintf(display_text, sizeof(display_text), "%s: %s", label, string_value);
+  }
+  else
+  {
+    // Tipe data tidak valid
+    snprintf(display_text, sizeof(display_text), "Invalid");
+  }
+
+  int length = strlen(display_text);
+  ssd1306_display_text(&dev, page, display_text, length, false);
+}
+
+void set_OLED1(int length, float input, int page)
 {
   char text[length];
   sprintf(text, "%.2f", input);
