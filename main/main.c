@@ -19,6 +19,8 @@
 #include "freertos/queue.h"
 #include "freertos/semphr.h"
 #include "driver/dac.h"
+#include "driver/uart.h"
+#include "esp_log.h"
 
 // -------- User Defined Library --------
 
@@ -49,6 +51,11 @@
 #define LEDC_CHANNEL LEDC_CHANNEL_0
 #define LEDC_DUTY_RESOLUTION LEDC_TIMER_13_BIT
 
+// UART Communication Declaration
+#define ECHO_TEST_TXD 1
+#define ECHO_TEST_RXD 3
+#define UART_DELAY_MS 100
+#define BUF_SIZE 1024
 
 // -------- OBJECT DECLARATION --------
 
@@ -66,8 +73,22 @@ int           pot_receive;
 QueueHandle_t ldr_queue;
 int           ldr_receive;
 
+// Queue Declaration: Send Data Humidity from DHT22 Sensor
+QueueHandle_t hum_queue;
+float         hum_receive;
+
+// Queue Declaration: Send Data Temperature from DHT22 Sensor
+QueueHandle_t tmp_queue;
+float         tmp_receive;
+
 // Mutex Declaration: Create 1 Mutex for Critical Session
 SemaphoreHandle_t mutex;
+
+
+// -------- VARIABLE DECLARATION --------
+
+// OLED Variable
+int oled_state;
 
 
 /*----------------------------------------------------
@@ -115,28 +136,18 @@ void DHT_task(void *pvParameter)
   setDHTgpio(DHT22_PIN); // Set GPIO for DHT22 Sensor
 
   while (1)
-  {
-    char  humidity[15],
-          temperature[15];
-    
-    printf("DHT Sensor Readings\n");
+  {            
     int ret = readDHT(); // Read Temperatuew and Humidity Value
 
     errorHandler(ret); // checks for the response after reading from DHT22
 
-    float hum = getHumidity();      // get the humidity value
-    float temp = getTemperature();  // get the temperature value
+    float hum = getHumidity();     // get the humidity value
+    float tmp = getTemperature();  // get the temperature value
 
-    printf("Humidity %.2f %%\n", hum);
-    printf("Temperature %.2f degC\n\n", temp);
-
-    // display to OLED
-    sprintf(humidity, "hum: %.2f %%", hum);
-    sprintf(temperature, "temp: %.2f C", temp);
-    ssd1306_display_text(&dev, 0, humidity, 8, false);
-    ssd1306_display_text(&dev, 2, temperature, 12, false);
-
-    vTaskDelay(2000 / portTICK_PERIOD_MS); // delay for 2s
+    // send adc_value to Queue
+    xQueueSend(hum_queue, &hum, (TickType_t)0);
+    xQueueSend(tmp_queue, &tmp, (TickType_t)0);
+    vTaskDelay(10 / portTICK_PERIOD_MS); // delay for 10 ms
   }
 }
 
@@ -147,7 +158,7 @@ Task:
 Potensiometer Read
 
 ----------------------------------------------------*/
-void potentiometer_task(void *pvParameter)
+void potentio_task(void *pvParameter)
 {  
   // -------- ADC CONFIGURATION --------
 
@@ -192,6 +203,7 @@ void ldr_task(void *pvParameter)
     vTaskDelay(10 / portTICK_PERIOD_MS); // delay for 10 ms
   }
 }
+
 
 /*----------------------------------------------------
 
@@ -253,6 +265,118 @@ void servo_task(void *pvParameter)
   }
 }
 
+/*----------------------------------------------------
+
+Task:
+Display to OLED
+
+Arg:
+state 1 = display humidity ; state 2 = display temperature
+state 3 = display LDR      ; state 4 = display Servo Degree
+
+----------------------------------------------------*/
+void oled_task(void *pvParameter)
+{
+  // Create OLED Object
+  SSD1306_t dev;
+  i2c_master_init(&dev, CONFIG_SDA_GPIO, CONFIG_SCL_GPIO, CONFIG_RESET_GPIO);
+  ssd1306_init(&dev, 128, 32);
+  ssd1306_clear_screen(&dev, false);
+  ssd1306_contrast(&dev, 0xff);
+
+  const int uart_num = UART_NUM_0;
+  uart_config_t uart_config = {
+      .baud_rate = 115200,
+      .data_bits = UART_DATA_8_BITS,
+      .parity = UART_PARITY_DISABLE,
+      .stop_bits = UART_STOP_BITS_1,
+      .flow_ctrl = UART_HW_FLOWCTRL_DISABLE,
+      .rx_flow_ctrl_thresh = 122,
+  };
+
+  uart_param_config(uart_num, &uart_config);
+  uart_set_pin(uart_num, ECHO_TEST_TXD, ECHO_TEST_RXD, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE);
+  uart_driver_install(uart_num, BUF_SIZE * 2, 0, 0, NULL, 0);
+
+  char cli_data[8];
+
+  while(1)
+  {
+    // read CLI Command data from UART
+    if (uart_read_bytes(UART_NUM_0, cli_data, sizeof(cli_data), pdMS_TO_TICKS(100)) > 0)
+    {
+      oled_state = atoi(cli_data); // convert raw data to int
+      ssd1306_clear_screen(&dev, false);
+    }
+
+    if (oled_state == 1)
+    {
+      char  head[10],
+            tail[10];
+
+      xQueueReceive(hum_queue, &hum_receive, (TickType_t)5);
+      
+      sprintf(head, "Humidity");
+      sprintf(tail, "%.2f %%", hum_receive);
+
+      ssd1306_display_text(&dev, 0, head, 10, false);
+      ssd1306_display_text(&dev, 2, tail, 10, false);
+    }
+    else if (oled_state == 2)
+    {
+      char  head[12],
+            tail[10];
+
+      xQueueReceive(tmp_queue, &tmp_receive, (TickType_t)5);
+
+      sprintf(head, "Temperature");
+      sprintf(tail, "%.2f C", tmp_receive);
+
+      ssd1306_display_text(&dev, 0, head, 12, false);
+      ssd1306_display_text(&dev, 2, tail, 10, false);
+    }
+    else if (oled_state == 3)
+    {
+      char  head[5],
+            tail[5];
+
+      xQueueReceive(ldr_queue, &ldr_receive, (TickType_t)5);
+
+      sprintf(head, "LDR");
+      sprintf(tail, "%d", ldr_receive);
+
+      ssd1306_display_text(&dev, 0, head, 5, false);
+      ssd1306_display_text(&dev, 2, tail, 5, false);
+    }
+    else if (oled_state == 4)
+    {
+      char  head[10],
+            tail[10];
+
+      // Take Mutex to save receiving data from potentio
+      if (xSemaphoreTake(mutex, portMAX_DELAY) == pdTRUE)
+      {
+        // Receive potentio value from queue
+        xQueueReceive(pot_queue, &pot_receive, (TickType_t)5);
+
+        // normalization adc value to rotation value
+        int val = map(pot_receive, 0, 4095, 200, 1000);
+
+        sprintf(head, "Servo");
+        sprintf(tail, "%d degree", val);
+
+        ssd1306_display_text(&dev, 0, head, 10, false);
+        ssd1306_display_text(&dev, 2, tail, 10, false);
+
+        // Give semaphore back
+        xSemaphoreGive(mutex);
+      }
+    }
+
+    vTaskDelay(10 / portTICK_PERIOD_MS); // delay for 10 ms
+  }
+}
+
 
 /*----------------------------------------------------
 
@@ -274,6 +398,8 @@ void app_main()
   // Create Method for Queue
   pot_queue = xQueueCreate(5, sizeof(int));
   ldr_queue = xQueueCreate(5, sizeof(int));
+  hum_queue = xQueueCreate(5, sizeof(int));
+  tmp_queue = xQueueCreate(5, sizeof(int));
 
   // Create Method for Mutex
   mutex = xSemaphoreCreateMutex();
@@ -283,8 +409,9 @@ void app_main()
   TASK CALLING
 
   ----------------------------------------------------*/
-  xTaskCreate(&DHT_task, "DHT_task", 2048*2, NULL, 5, NULL);
-  xTaskCreate(&potentiometer_task, "potentiometer_task", 2048*2, NULL, 4, NULL);
-  xTaskCreate(ldr_task, "ldr_task", 2048*2, NULL, 4, NULL);
-  xTaskCreate(servo_task, "servo task", 2048*2, NULL, 4, NULL);  
+  xTaskCreate(&oled_task,     "oled_task",      2048 * 2, NULL, 5, NULL);
+  xTaskCreate(&DHT_task,      "DHT_task",       2048 * 2, NULL, 4, NULL);
+  xTaskCreate(&potentio_task, "potentio_task",  2048 * 2, NULL, 4, NULL);
+  xTaskCreate(ldr_task,       "ldr_task",       2048 * 2, NULL, 4, NULL);
+  xTaskCreate(servo_task,     "servo task",     2048 * 2, NULL, 4, NULL);  
 }
