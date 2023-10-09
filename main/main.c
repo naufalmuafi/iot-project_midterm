@@ -1,3 +1,12 @@
+/* =====================================
+
+             IOT PROJECT
+            NAUFAL MU'AFI
+         20/456724/TK/50548
+
+===================================== */
+
+
 // -------- Including Necessary Library --------
 
 #include <stdio.h>
