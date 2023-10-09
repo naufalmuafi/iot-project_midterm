@@ -23,7 +23,8 @@
     "stdio.h": "c",
     "sdkconfig.h": "c",
     "dht22.h": "c",
-    "nvs_flash.h": "c"
+    "nvs_flash.h": "c",
+    "ssd1306.h": "c"
   },
   "idf.flashType": "UART"
 }
