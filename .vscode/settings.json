@@ -25,7 +25,9 @@
     "dht22.h": "c",
     "nvs_flash.h": "c",
     "ssd1306.h": "c",
-    "i2c.h": "c"
+    "i2c.h": "c",
+    "esp_types.h": "c",
+    "esp_adc_cal.h": "c"
   },
   "idf.flashType": "UART"
 }
