@@ -88,7 +88,7 @@ SemaphoreHandle_t mutex;
 // -------- VARIABLE DECLARATION --------
 
 // OLED Variable
-int oled_state;
+int oled_state = 0;
 
 
 /*----------------------------------------------------
@@ -371,6 +371,17 @@ void oled_task(void *pvParameter)
         // Give semaphore back
         xSemaphoreGive(mutex);
       }
+    }
+    else
+    {
+      char  head[10],
+            tail[10];
+
+      sprintf(head, "1.H - 2.T");
+      sprintf(tail, "3.L - 4.S");
+
+      ssd1306_display_text(&dev, 0, head, 10, false);
+      ssd1306_display_text(&dev, 2, tail, 10, false);
     }
 
     vTaskDelay(10 / portTICK_PERIOD_MS); // delay for 10 ms
