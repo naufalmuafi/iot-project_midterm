@@ -60,7 +60,7 @@ void init_setup()
   // -------- OLED Configuration --------  
   i2c_master_init(&dev, CONFIG_SDA_GPIO, CONFIG_SCL_GPIO, CONFIG_RESET_GPIO);
 
-  ssd1306_init(&dev, 128, 64);
+  ssd1306_init(&dev, 128, 32);
   ssd1306_clear_screen(&dev, false);
   ssd1306_contrast(&dev, 0xff);
 }
@@ -77,15 +77,33 @@ void DHT_task(void *pvParameter)
 {
   setDHTgpio(DHT22_PIN); // Set GPIO for DHT22 Sensor
 
+  SSD1306_t dev;
+  i2c_master_init(&dev, CONFIG_SDA_GPIO, CONFIG_SCL_GPIO, CONFIG_RESET_GPIO);
+  ssd1306_init(&dev, 128, 32);
+  ssd1306_clear_screen(&dev, false);
+  ssd1306_contrast(&dev, 0xff);
+
   while (1)
   {
+    char  humidity[15],
+          temperature[15];
+    
     printf("DHT Sensor Readings\n");
     int ret = readDHT(); // Read Temperatuew and Humidity Value
 
     errorHandler(ret); // checks for the response after reading from DHT22
 
-    printf("Humidity %.2f %%\n", getHumidity());           // get the humidity value
-    printf("Temperature %.2f degC\n\n", getTemperature()); // get the temperature value
+    float hum = getHumidity();      // get the humidity value
+    float temp = getTemperature();  // get the temperature value
+
+    printf("Humidity %.2f %%\n", hum);
+    printf("Temperature %.2f degC\n\n", temp);
+
+    // display to OLED
+    sprintf(humidity, "hum: %.2f %%", hum);
+    sprintf(temperature, "temp: %.2f C", temp);
+    ssd1306_display_text(&dev, 0, humidity, 8, false);
+    ssd1306_display_text(&dev, 2, temperature, 12, false);
 
     vTaskDelay(2000 / portTICK_PERIOD_MS); // delay for 2s
   }
@@ -118,7 +136,7 @@ void potentiometer_task(void *pvParameter)
     printf("ADC Value: %d\n", adc_value);
     printf("Nilai Potentiometer: %ld mV\n\n", mV);
 
-    vTaskDelay(pdMS_TO_TICKS(500)); // delay for 0.5s
+    vTaskDelay(pdMS_TO_TICKS(2000)); // delay for 0.5s
   }
 }
 
@@ -145,7 +163,7 @@ void ldr_task(void *pvParameter)
     // display value on serial terminal
     printf("LDR ADC Value: %d\n\n", adc_value);    
 
-    vTaskDelay(pdMS_TO_TICKS(500)); // delay for 0.5s
+    vTaskDelay(pdMS_TO_TICKS(2000)); // delay for 0.5s
   }
 }
 
@@ -166,7 +184,7 @@ void app_main()
   TASK CALLING
 
   ----------------------------------------------------*/
-  xTaskCreate(&DHT_task, "DHT_task", 2048, NULL, 5, NULL);
-  xTaskCreate(potentiometer_task, "potentiometer_task", 2048, NULL, 5, NULL);
-  xTaskCreate(ldr_task, "ldr_task", 2048, NULL, 5, NULL);
+  xTaskCreate(&DHT_task, "DHT_task", 2048*2, NULL, 5, NULL);
+  xTaskCreate(potentiometer_task, "potentiometer_task", 2048*2, NULL, 5, NULL);
+  xTaskCreate(ldr_task, "ldr_task", 2048*2, NULL, 5, NULL);
 }
