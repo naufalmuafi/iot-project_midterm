@@ -1,4 +1,5 @@
 // -------- Including Necessary Library --------
+
 #include <stdio.h>
 #include <time.h>
 #include <string.h>
@@ -20,6 +21,7 @@
 #include "driver/dac.h"
 
 // -------- User Defined Library --------
+
 #include "DHT22.h"
 #include "ssd1306.h"
 
@@ -47,7 +49,9 @@
 #define LEDC_CHANNEL LEDC_CHANNEL_0
 #define LEDC_DUTY_RESOLUTION LEDC_TIMER_13_BIT
 
+
 // -------- OBJECT DECLARATION --------
+
 // ADC Declaration
 static esp_adc_cal_characteristics_t CHANNEL_ADC;
 
@@ -157,6 +161,7 @@ void potentiometer_task(void *pvParameter)
   {
     int adc_value = adc1_get_raw(POT_PIN); // capture RAW ADC Value    
 
+    // send adc_value to Queue
     xQueueSend(pot_queue, &adc_value, (TickType_t)0);
     vTaskDelay(10 / portTICK_PERIOD_MS); // delay for 10 ms
   }
@@ -182,8 +187,8 @@ void ldr_task(void *pvParameter)
   {
     int adc_value = adc1_get_raw(LDR_PIN); // capture RAW ADC Value from LDR Sensor
 
+    // send adc_value to Queue
     xQueueSend(ldr_queue, &adc_value, (TickType_t)0);
-
     vTaskDelay(10 / portTICK_PERIOD_MS); // delay for 10 ms
   }
 }
@@ -196,7 +201,7 @@ Motor Servo Motion
 ----------------------------------------------------*/
 void servo_task(void *pvParameter)
 {
-  // Configure GPIO for servo control
+  // Configuring GPIO to control the servo
   gpio_config_t io_conf = {
       .mode = GPIO_MODE_OUTPUT,
       .pin_bit_mask = (1ULL << SERVO_PIN),
@@ -206,7 +211,7 @@ void servo_task(void *pvParameter)
   };
   gpio_config(&io_conf);
 
-  // Configure LEDC for PWM control
+  // Configuring LEDC to control PWM
   ledc_timer_config_t timer_conf = {
       .duty_resolution = LEDC_DUTY_RESOLUTION,
       .freq_hz = 50,
@@ -228,14 +233,20 @@ void servo_task(void *pvParameter)
 
   while(1)
   {
+    // Take Mutex to save receiving data from potentio
     if (xSemaphoreTake(mutex, portMAX_DELAY) == pdTRUE)
     {
+      // Receive potentio value from queue
       xQueueReceive(pot_queue, &pot_receive, (TickType_t)5);
+
+      // normalization adc value to rotation value
       int val = map(pot_receive, 0, 4095, 200, 1000);
 
+      // set servo motion
       ledc_set_duty(LEDC_MODE, LEDC_CHANNEL, val);
       ledc_update_duty(LEDC_MODE, LEDC_CHANNEL);
 
+      // Give semaphore back
       xSemaphoreGive(mutex);
     }
     vTaskDelay(10/portTICK_PERIOD_MS); // delay for 10 ms
@@ -259,9 +270,12 @@ void app_main()
   OBJECT METHOD DECLARATION
 
   ----------------------------------------------------*/
+
+  // Create Method for Queue
   pot_queue = xQueueCreate(5, sizeof(int));
   ldr_queue = xQueueCreate(5, sizeof(int));
 
+  // Create Method for Mutex
   mutex = xSemaphoreCreateMutex();
 
   /*----------------------------------------------------
