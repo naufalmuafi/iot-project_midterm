@@ -156,7 +156,7 @@ void DHT_task(void *pvParameter)
     // send adc_value to Queue
     xQueueSend(hum_queue, &hum, (TickType_t)0);
     xQueueSend(tmp_queue, &tmp, (TickType_t)0);
-    vTaskDelay(10 / portTICK_PERIOD_MS); // delay for 10 ms
+    vTaskDelay(100 / portTICK_PERIOD_MS); // delay for 10 ms
   }
 }
 
@@ -209,7 +209,7 @@ void ldr_task(void *pvParameter)
 
     // send adc_value to Queue
     xQueueSend(ldr_queue, &adc_value, (TickType_t)0);
-    vTaskDelay(10 / portTICK_PERIOD_MS); // delay for 10 ms
+    vTaskDelay(100 / portTICK_PERIOD_MS); // delay for 10 ms
   }
 }
 
@@ -274,6 +274,7 @@ void servo_task(void *pvParameter)
   }
 }
 
+
 /*----------------------------------------------------
 
 Task:
@@ -310,7 +311,7 @@ void oled_task(void *pvParameter)
   char cli_data[8];
 
   while(1)
-  {
+  {    
     // read CLI Command data from UART
     if (uart_read_bytes(UART_NUM_0, cli_data, sizeof(cli_data), pdMS_TO_TICKS(100)) > 0)
     {
@@ -320,21 +321,21 @@ void oled_task(void *pvParameter)
 
     if (oled_state == 1)
     {
-      char  head[10],
-            tail[10];
+      char  head[9],
+            tail[8];
 
       xQueueReceive(hum_queue, &hum_receive, (TickType_t)5);
       
       sprintf(head, "Humidity");
       sprintf(tail, "%.2f %%", hum_receive);
 
-      ssd1306_display_text(&dev, 0, head, 10, false);
-      ssd1306_display_text(&dev, 2, tail, 10, false);
+      ssd1306_display_text(&dev, 0, head, 9, false);
+      ssd1306_display_text(&dev, 2, tail, 8, false);
     }
     else if (oled_state == 2)
     {
       char  head[12],
-            tail[10];
+            tail[8];
 
       xQueueReceive(tmp_queue, &tmp_receive, (TickType_t)5);
 
@@ -342,24 +343,24 @@ void oled_task(void *pvParameter)
       sprintf(tail, "%.2f C", tmp_receive);
 
       ssd1306_display_text(&dev, 0, head, 12, false);
-      ssd1306_display_text(&dev, 2, tail, 10, false);
+      ssd1306_display_text(&dev, 2, tail, 8, false);
     }
     else if (oled_state == 3)
     {
-      char  head[5],
-            tail[5];
+      char  head[4],
+            tail[3];
 
       xQueueReceive(ldr_queue, &ldr_receive, (TickType_t)5);
 
       sprintf(head, "LDR");
       sprintf(tail, "%d", ldr_receive);
 
-      ssd1306_display_text(&dev, 0, head, 5, false);
-      ssd1306_display_text(&dev, 2, tail, 5, false);
+      ssd1306_display_text(&dev, 0, head, 4, false);
+      ssd1306_display_text(&dev, 2, tail, 3, false);
     }
     else if (oled_state == 4)
     {
-      char  head[10],
+      char  head[6],
             tail[10];
 
       // Take Mutex to save receiving data from potentio
@@ -374,7 +375,7 @@ void oled_task(void *pvParameter)
         sprintf(head, "Servo");
         sprintf(tail, "%d degree", val);
 
-        ssd1306_display_text(&dev, 0, head, 10, false);
+        ssd1306_display_text(&dev, 0, head, 6, false);
         ssd1306_display_text(&dev, 2, tail, 10, false);
 
         // Give semaphore back
@@ -384,13 +385,16 @@ void oled_task(void *pvParameter)
     else
     {
       char  head[10],
-            tail[10];
+            center[10],
+            tail[13];
 
       sprintf(head, "1.H - 2.T");
-      sprintf(tail, "3.L - 4.S");
+      sprintf(center, "3.L - 4.S");
+      sprintf(tail, "Input Number");
 
       ssd1306_display_text(&dev, 0, head, 10, false);
-      ssd1306_display_text(&dev, 2, tail, 10, false);
+      ssd1306_display_text(&dev, 1, center, 10, false);
+      ssd1306_display_text(&dev, 1, tail, 13, false);
     }
 
     vTaskDelay(10 / portTICK_PERIOD_MS); // delay for 10 ms
