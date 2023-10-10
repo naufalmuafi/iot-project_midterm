@@ -252,6 +252,10 @@ void servo_task(void *pvParameter)
   };
   ledc_channel_config(&channel_conf);
 
+  // set servo motion
+  ledc_set_duty(LEDC_MODE, LEDC_CHANNEL, 200);
+  ledc_update_duty(LEDC_MODE, LEDC_CHANNEL);
+
   while(1)
   {
     // Take Mutex to save receiving data from potentio
@@ -261,16 +265,16 @@ void servo_task(void *pvParameter)
       xQueueReceive(pot_queue, &pot_receive, (TickType_t)5);
 
       // normalization adc value to rotation value
-      int val = map(pot_receive, 0, 4095, 200, 1000);
+      int deg = map(pot_receive, 0, 4095, 200, 1000);
 
       // set servo motion
-      ledc_set_duty(LEDC_MODE, LEDC_CHANNEL, val);
+      ledc_set_duty(LEDC_MODE, LEDC_CHANNEL, deg);
       ledc_update_duty(LEDC_MODE, LEDC_CHANNEL);
 
       // Give semaphore back
       xSemaphoreGive(mutex);
     }
-    vTaskDelay(10/portTICK_PERIOD_MS); // delay for 10 ms
+    vTaskDelay(10 / portTICK_PERIOD_MS); // delay for 10 ms
   }
 }
 
@@ -294,6 +298,7 @@ void oled_task(void *pvParameter)
   ssd1306_clear_screen(&dev, false);
   ssd1306_contrast(&dev, 0xff);
 
+  // Configuring UART
   const int uart_num = UART_NUM_0;
   uart_config_t uart_config = {
       .baud_rate = 115200,
@@ -319,7 +324,9 @@ void oled_task(void *pvParameter)
       ssd1306_clear_screen(&dev, false);
     }
 
-    if (oled_state == 1)
+    // ========== Display OLED Menu ==========
+
+    if (oled_state == 1) // Display Humidity
     {
       char  head[9],
             tail[8];
@@ -332,7 +339,7 @@ void oled_task(void *pvParameter)
       ssd1306_display_text(&dev, 0, head, 9, false);
       ssd1306_display_text(&dev, 2, tail, 8, false);
     }
-    else if (oled_state == 2)
+    else if (oled_state == 2) // Display Temperature
     {
       char  head[12],
             tail[8];
@@ -345,7 +352,7 @@ void oled_task(void *pvParameter)
       ssd1306_display_text(&dev, 0, head, 12, false);
       ssd1306_display_text(&dev, 2, tail, 8, false);
     }
-    else if (oled_state == 3)
+    else if (oled_state == 3) // Display LDR
     {
       char  head[4],
             tail[3];
@@ -358,7 +365,7 @@ void oled_task(void *pvParameter)
       ssd1306_display_text(&dev, 0, head, 4, false);
       ssd1306_display_text(&dev, 2, tail, 3, false);
     }
-    else if (oled_state == 4)
+    else if (oled_state == 4) // Display Servo Degree
     {
       char  head[6],
             tail[10];
@@ -370,7 +377,7 @@ void oled_task(void *pvParameter)
         xQueueReceive(pot_queue, &pot_receive, (TickType_t)5);
 
         // normalization adc value to rotation value
-        int val = map(pot_receive, 0, 4095, 200, 1000);
+        int val = map(pot_receive, 0, 4095, 0, 180);
 
         sprintf(head, "Servo");
         sprintf(tail, "%d degree", val);
@@ -382,7 +389,7 @@ void oled_task(void *pvParameter)
         xSemaphoreGive(mutex);
       }
     }
-    else
+    else // Display Menu Default
     {
       char  head[10],
             center[10],
@@ -394,10 +401,10 @@ void oled_task(void *pvParameter)
 
       ssd1306_display_text(&dev, 0, head, 10, false);
       ssd1306_display_text(&dev, 1, center, 10, false);
-      ssd1306_display_text(&dev, 1, tail, 13, false);
+      ssd1306_display_text(&dev, 2, tail, 13, false);
     }
 
-    vTaskDelay(10 / portTICK_PERIOD_MS); // delay for 10 ms
+    vTaskDelay(100 / portTICK_PERIOD_MS); // delay for 10 ms
   }
 }
 
@@ -424,7 +431,7 @@ void app_main()
   ldr_queue = xQueueCreate(5, sizeof(int));
   hum_queue = xQueueCreate(5, sizeof(int));
   tmp_queue = xQueueCreate(5, sizeof(int));
-
+  
   // Create Method for Mutex
   mutex = xSemaphoreCreateMutex();
 
@@ -436,6 +443,6 @@ void app_main()
   xTaskCreate(&oled_task,     "oled_task",      2048 * 2, NULL, 5, NULL);
   xTaskCreate(&DHT_task,      "DHT_task",       2048 * 2, NULL, 4, NULL);
   xTaskCreate(&potentio_task, "potentio_task",  2048 * 2, NULL, 4, NULL);
+  xTaskCreate(&servo_task,    "servo task",     2048 * 2, NULL, 4, NULL);  
   xTaskCreate(ldr_task,       "ldr_task",       2048 * 2, NULL, 4, NULL);
-  xTaskCreate(servo_task,     "servo task",     2048 * 2, NULL, 4, NULL);  
 }
